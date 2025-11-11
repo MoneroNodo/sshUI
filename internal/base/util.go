@@ -2,12 +2,15 @@ package base
 
 import (
 	"encoding/json"
-	"errors"
 	"io"
+	"io/fs"
 	"os"
+	"regexp"
 	"time"
 
+	tea "github.com/charmbracelet/bubbletea"
 	"github.com/davecgh/go-spew/spew"
+	"github.com/mergestat/timediff"
 )
 
 var (
@@ -15,6 +18,8 @@ var (
 	config  map[string]any
 	lastUpd time.Time = time.Unix(0, 0)
 )
+
+const addrPattern = "^4[0-9A-Za-z]{94}$"
 
 // const (
 // 	configLoc = "/home/nodo/variables/config.json"
@@ -26,7 +31,11 @@ const (
 	configBak = "config.json.bak"
 )
 
-const Device string = "Nodo"
+type ConfigSavedMsg struct{}
+
+type ErrorMsg struct {
+	err error
+}
 
 func Bool(b bool) string {
 	if b {
@@ -36,7 +45,11 @@ func Bool(b bool) string {
 	}
 }
 
-func SaveConfigFile() error {
+func GetBool(s string) bool {
+	return s == "TRUE"
+}
+
+func SaveConfigFile() tea.Msg {
 	err := backup()
 	if err != nil {
 		spew.Fprintf(Dump, "SaveConfig: %v", err)
@@ -49,7 +62,7 @@ func SaveConfigFile() error {
 		}
 		os.WriteFile(configLoc, j, 0o644)
 	}
-	return nil
+	return ConfigSavedMsg{}
 }
 
 func loadConfigFile() (map[string]any, error) {
@@ -70,11 +83,38 @@ func updateConfig() error {
 		var err error
 		config, err = loadConfigFile()
 		if err != nil {
-			// spew.Fdump(Dump, err)
 			return err
 		}
 	}
 	return nil
+}
+
+func SetMpayConfig(key string, value any) {
+	err := updateConfig()
+	if err != nil {
+		spew.Fdump(Dump, err)
+		return
+	}
+	if config["config"] == nil ||
+		config["config"].(map[string]any)["moneropay"] == nil {
+		return
+	}
+	config["config"].(map[string]any)["moneropay"].(map[string]any)[key] = value
+	SaveConfigFile()
+}
+
+func SetBanlistConfig(key string, value bool) {
+	err := updateConfig()
+	if err != nil {
+		spew.Fdump(Dump, err)
+		return
+	}
+	if config["config"] == nil ||
+		config["config"].(map[string]any)["banlists"] == nil {
+		return
+	}
+	config["config"].(map[string]any)["banlists"].(map[string]any)[key] = Bool(value)
+	SaveConfigFile()
 }
 
 func SetConfig(key string, value any) {
@@ -84,7 +124,6 @@ func SetConfig(key string, value any) {
 		return
 	}
 	if config["config"] == nil {
-		spew.Fdump(Dump, config)
 		return
 	}
 	switch value := value.(type) {
@@ -105,39 +144,38 @@ func GetConfig() *(map[string]any) {
 }
 
 func GetVal(qr ...string) any {
-	c := GetConfig()
+	c := (*GetConfig())["config"].(map[string]any)
 	for _, s := range qr {
-		switch (*c)[s].(type) {
+		switch c[s].(type) {
 		case map[string]any:
-			*c = (*c)[s].(map[string]any)
+			c = c[s].(map[string]any)
 		default:
-			return (*c)[s]
+			if c[s] == "TRUE" || c[s] == "FALSE" {
+				return GetBool(c[s].(string))
+			}
+			return c[s]
 		}
 	}
 	return c
 }
 
 func IsFirstBoot() bool {
-	j, err := os.Stat("/home/nodo/variables/firstboot")
-	spew.Fdump(Dump, j, err)
-	if err == nil {
-		return false
-	}
-	return !errors.Is(err, os.ErrNotExist)
+	_, err := os.Stat("/home/nodo/variables/firstboot")
+	err, ok := err.(*fs.PathError)
+	return ok
 }
 
 func backup() error {
 	_, err := os.Stat(configBak)
 	if err != nil {
-		return err
+		os.Remove(configBak)
 	}
-	os.Remove(configBak)
 	from, err := os.Open(configLoc)
 	if err != nil {
 		return err
 	}
 	defer from.Close()
-	to, err := os.Open(configBak)
+	to, err := os.Create(configBak)
 	if err != nil {
 		return err
 	}
@@ -147,4 +185,20 @@ func backup() error {
 		return err
 	}
 	return nil
+}
+
+func UnixTimeRelative(unix int64) string {
+	return timediff.TimeDiff(time.Unix(unix, 0))
+}
+
+func UnixTime(unix int64) string {
+	t := time.Unix(unix, 0)
+	tz, _ := GetVal("timezone").(string)
+	loc, _ := time.LoadLocation(tz)
+	return t.In(loc).Format("2 January 2006 15:04:05")
+}
+
+func ValidateAddr(addr string) bool {
+	match, _ := regexp.MatchString(addrPattern, addr)
+	return match
 }

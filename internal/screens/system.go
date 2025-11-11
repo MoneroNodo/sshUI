@@ -5,7 +5,7 @@ import (
 
 	tea "github.com/charmbracelet/bubbletea"
 	gss "github.com/charmbracelet/lipgloss"
-	"github.com/moneronodo/sshui/internal/backend"
+	"github.com/moneronodo/sshui/internal/backend/i_dbus"
 	"github.com/moneronodo/sshui/internal/base"
 	// "github.com/moneronodo/sshui/internal/base"
 )
@@ -33,20 +33,20 @@ func NewSystem() *System {
 }
 
 func (s *System) Init() tea.Msg {
-	rebootButton = NewScreenButton("Reboot", gss.Color(base.CYellow), func(sb *ScreenButton) tea.Msg {
+	rebootButton = NewScreenButton("Reboot", gss.Color(base.CYellow), func(sb *ScreenButton) tea.Cmd {
 		AddPopup(NewDefaultPopupYesNo("Restart", "Are you sure?", gss.Color(base.CBrightRed),
-			func(sb *ScreenButton) tea.Msg {
-				backend.DbusCall("restart")
+			func(sb *ScreenButton) tea.Cmd {
+				i_dbus.Call("restart")
 				return nil
 			},
 			nil,
 		))
 		return nil
 	})
-	shutdownButton = NewScreenButton("Shutdown", gss.Color(base.CRed), func(sb *ScreenButton) tea.Msg {
+	shutdownButton = NewScreenButton("Shutdown", gss.Color(base.CRed), func(sb *ScreenButton) tea.Cmd {
 		AddPopup(NewDefaultPopupYesNo("Shutdown", "Are you sure?", gss.Color(base.CBrightRed),
-			func(sb *ScreenButton) tea.Msg {
-				backend.DbusCall("shutdown")
+			func(sb *ScreenButton) tea.Cmd {
+				i_dbus.Call("shutdown")
 				return nil
 			},
 			nil,
@@ -64,10 +64,10 @@ func (s *System) Init() tea.Msg {
 		gss.Color(base.CYellow),
 		nil,
 	)
-	recoveryButton = NewScreenButton("Start Recovery", gss.Color(base.CBrightPurple), func(sb *ScreenButton) tea.Msg {
+	recoveryButton = NewScreenButton("Start Recovery", gss.Color(base.CBrightPurple), func(sb *ScreenButton) tea.Cmd {
 		AddPopup(NewDefaultPopupOKCancel("Recovery", "Select your recovery options, then press OK.", gss.Color(base.CYellow),
-			func(sb *ScreenButton) tea.Msg {
-				backend.DbusCall("startRecovery", recoveryFSToggle.toggled, recoveryResyncToggle.toggled)
+			func(sb *ScreenButton) tea.Cmd {
+				i_dbus.Call("startRecovery", recoveryFSToggle.toggled, recoveryResyncToggle.toggled)
 				return nil
 			},
 			nil,
@@ -124,6 +124,23 @@ func (s *System) Prev() tea.Msg {
 	return UpdateFocus(s, -1)
 }
 
-func (s *System) Interact(m tea.Model) tea.Msg {
+func (s *System) Interact(m tea.Model) tea.Cmd {
 	return s.items[s.current].Interact(m)
 }
+
+func (s *System) PosVertical() gss.Position {
+	return gss.Position(0.8)
+}
+
+func (s *System) PosHorizontal() gss.Position {
+	return gss.Center
+}
+
+func (s *System) ItemWidth() int {
+	return 8
+}
+
+func (s *System) Vertical() bool {
+	return false
+}
+

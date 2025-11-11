@@ -2,8 +2,9 @@ package screens
 
 import (
 	"fmt"
+	"math"
+	"strings"
 
-	"github.com/charmbracelet/bubbles/table"
 	"github.com/charmbracelet/bubbles/textinput"
 	tea "github.com/charmbracelet/bubbletea"
 	gss "github.com/charmbracelet/lipgloss"
@@ -15,8 +16,8 @@ var (
 	Popups []Popup
 )
 
-type ScreenToggleAction func(*ScreenToggle, bool) tea.Msg
-type ScreenButtonAction func(*ScreenButton) tea.Msg
+type ScreenToggleAction func(*ScreenToggle, bool) tea.Cmd
+type ScreenButtonAction func(*ScreenButton) tea.Cmd
 
 type ScreenLeaveMsg struct {
 	Current Screen
@@ -36,9 +37,10 @@ type Popup interface {
 	Items() []ScreenItem
 	Prev() tea.Msg
 	Next() tea.Msg
-	Interact(model tea.Model) tea.Msg
+	Interact(model tea.Model) tea.Cmd
 	Render() string
 	Current() int
+	Width() int
 }
 
 type DefaultPopup struct {
@@ -47,18 +49,23 @@ type DefaultPopup struct {
 	items   []ScreenItem
 	color   gss.Color
 	current int
+	width   int
 }
 
 type Screen interface {
 	Init() tea.Msg
 	View()
 	Update(msg tea.Msg, model tea.Model) tea.Cmd
+	Vertical() bool
 	Label() string
 	Items() []ScreenItem
 	Current() *int
 	Next() tea.Msg
 	Prev() tea.Msg
-	Interact(model tea.Model) tea.Msg
+	PosHorizontal() gss.Position
+	PosVertical() gss.Position
+	ItemWidth() int
+	Interact(model tea.Model) tea.Cmd
 }
 
 type ScreenItem interface {
@@ -68,16 +75,18 @@ type ScreenItem interface {
 	SetColor(gss.Color)
 	GetColor() gss.Color
 	IsFocus() bool
-	Interact(model tea.Model) tea.Msg
+	Update(msg tea.Msg, model tea.Model) tea.Cmd
+	Interact(model tea.Model) tea.Cmd
 }
 
 type ScreenPane struct {
-	Title   string
-	Current int
-	Items   []ScreenItem
-	Focus   bool
-	Color   gss.Color
-	Style   gss.Style
+	Title     string
+	Current   int
+	Items     []ScreenItem
+	Focus     bool
+	Color     gss.Color
+	Style     gss.Style
+	ItemStyle gss.Style
 }
 
 func NewScreenPane(title string, color gss.Color, items ...ScreenItem) *ScreenPane {
@@ -85,11 +94,23 @@ func NewScreenPane(title string, color gss.Color, items ...ScreenItem) *ScreenPa
 	sp.Title = title
 	sp.Color = color
 	sp.Items = items
+	sp.ItemStyle = gss.NewStyle().PaddingBottom(1)
 	return sp
 }
 
-func (sp *ScreenPane) Interact(m tea.Model) tea.Msg {
+func (si *ScreenPane) Update(msg tea.Msg, model tea.Model) tea.Cmd {
+	cmds := []tea.Cmd{}
+	for _, i := range si.Items {
+		if i.IsEnabled() {
+			cmds = append(cmds, i.Update(msg, model))
+		}
+	}
+	return tea.Batch(cmds...)
+}
+
+func (sp *ScreenPane) Interact(m tea.Model) tea.Cmd {
 	if sp.Current < len(sp.Items) && sp.Items[sp.Current].IsEnabled() {
+		spew.Fprintf(base.Dump, "cur=%d m=%v\n", sp.Current, m)
 		return sp.Items[sp.Current].Interact(m)
 	}
 	return nil
@@ -97,9 +118,9 @@ func (sp *ScreenPane) Interact(m tea.Model) tea.Msg {
 
 func (sp *ScreenPane) Render() string {
 	var s []string
-	s = append(s, labelInner.Bold(true).Render(sp.Title))
+	s = append(s, labelInner.Bold(true).PaddingBottom(1).Render(sp.Title))
 	for _, i := range sp.Items {
-		s = append(s, i.Render())
+		s = append(s, sp.ItemStyle.Render(i.Render()))
 	}
 	return sp.Style.Render(gss.JoinVertical(
 		gss.Left,
@@ -109,7 +130,7 @@ func (sp *ScreenPane) Render() string {
 
 func (sp *ScreenPane) IsEnabled() bool {
 	for _, i := range sp.Items {
-		if i.IsEnabled() {
+		if i != nil && i.IsEnabled() {
 			return true
 		}
 	}
@@ -138,44 +159,6 @@ func (sp *ScreenPane) GetColor() gss.Color {
 	return sp.Color
 }
 
-type ScreenTable struct {
-	Delegate table.Model
-	color    gss.Color
-	Style    gss.Style
-}
-
-func NewScreenTable(columns []table.Column, rows []table.Row, color gss.Color) *ScreenTable {
-	si := new(ScreenTable)
-	si.Delegate = table.New(table.WithColumns(columns), table.WithRows(rows))
-	// TODO
-	si.SetColor(color)
-	return si
-}
-
-func (st *ScreenTable) Interact(m tea.Model) tea.Msg { return nil }
-func (st *ScreenTable) Render() string {
-	return st.Style.Render(st.Delegate.View())
-}
-
-func (st *ScreenTable) SetFocus(focus bool) {}
-
-func (st *ScreenTable) IsFocus() bool {
-	return false
-}
-
-func (st *ScreenTable) IsEnabled() bool {
-	return false
-}
-
-func (st *ScreenTable) SetColor(color gss.Color) {
-	st.color = color
-	st.Style = gss.NewStyle().Foreground(st.color)
-}
-
-func (st *ScreenTable) GetColor() gss.Color {
-	return st.color
-}
-
 type ScreenLabel struct {
 	label string
 	color gss.Color
@@ -190,7 +173,17 @@ func NewScreenLabel(text string, color gss.Color) *ScreenLabel {
 	return si
 }
 
-func (sl *ScreenLabel) Interact(m tea.Model) tea.Msg { return nil }
+func NewScreenHr(size int, color gss.Color) *ScreenLabel {
+	var rule []byte = make([]byte, size)
+	for i := range size {
+		rule[i] = '-'
+	}
+	return NewScreenLabel(string(rule), color)
+}
+
+func (si *ScreenLabel) Update(_ tea.Msg, _ tea.Model) tea.Cmd { return nil }
+
+func (sl *ScreenLabel) Interact(_ tea.Model) tea.Cmd { return nil }
 func (sl *ScreenLabel) Render() string {
 	return sl.Style.Render(sl.label)
 }
@@ -229,6 +222,8 @@ type ScreenInputField struct {
 
 func NewScreenInputField(text string, placeholder string, color gss.Color) *ScreenInputField {
 	si := new(ScreenInputField)
+	si.Delegate = textinput.New()
+	si.Delegate.Width = 40
 	si.Delegate.Placeholder = placeholder
 	si.SetColor(color)
 	si.Delegate.TextStyle = gss.NewStyle().Foreground(gss.Color(base.CGray))
@@ -238,12 +233,31 @@ func NewScreenInputField(text string, placeholder string, color gss.Color) *Scre
 	return si
 }
 
-func (si *ScreenInputField) Interact(m tea.Model) tea.Msg {
-	return si.Delegate.Focus() // FIX
+func (si *ScreenInputField) Interact(m tea.Model) tea.Cmd {
+	return nil
+}
+
+func (si *ScreenInputField) Update(msg tea.Msg, _ tea.Model) tea.Cmd {
+	model, cmd := si.Delegate.Update(msg)
+	si.Delegate = model
+	return cmd
 }
 
 func (si *ScreenInputField) Render() string {
-	return ""
+	if !si.enabled {
+		si.Delegate.PromptStyle = si.StyleDisabled
+		si.Delegate.TextStyle = si.StyleDisabled
+		si.Delegate.Blur()
+	} else if si.focus {
+		si.Delegate.PromptStyle = si.StyleFocus
+		si.Delegate.TextStyle = si.StyleFocus
+		si.Delegate.Focus()
+	} else {
+		si.Delegate.PromptStyle = si.Style
+		si.Delegate.TextStyle = si.Style
+		si.Delegate.Blur()
+	}
+	return si.Delegate.View()
 }
 
 func (si *ScreenInputField) SetFocus(focus bool) {
@@ -297,13 +311,16 @@ func NewScreenToggle(label string, color gss.Color, action ScreenToggleAction) *
 	return sb
 }
 
-func (st *ScreenToggle) Interact(m tea.Model) tea.Msg {
+func (st *ScreenToggle) Interact(m tea.Model) tea.Cmd {
 	st.toggled = !st.toggled
-	spew.Fdump(base.Dump, st)
 	if st.Action == nil {
 		return nil
 	}
 	return st.Action(st, st.toggled)
+}
+
+func (st *ScreenToggle) Update(_ tea.Msg, _ tea.Model) tea.Cmd {
+	return nil
 }
 
 func (st *ScreenToggle) Render() string {
@@ -372,7 +389,11 @@ func NewScreenButton(label string, color gss.Color, action ScreenButtonAction) *
 	return sb
 }
 
-func (sb *ScreenButton) Interact(m tea.Model) tea.Msg {
+func (sb *ScreenButton) Update(_ tea.Msg, _ tea.Model) tea.Cmd {
+	return nil
+}
+
+func (sb *ScreenButton) Interact(m tea.Model) tea.Cmd {
 	if sb.Action == nil {
 		return nil
 	}
@@ -627,7 +648,7 @@ func (dp *DefaultPopup) Next() tea.Msg {
 	}
 }
 
-func (dp *DefaultPopup) Interact(model tea.Model) tea.Msg {
+func (dp *DefaultPopup) Interact(model tea.Model) tea.Cmd {
 	switch len(dp.items) {
 	case 0:
 		return nil
@@ -636,6 +657,35 @@ func (dp *DefaultPopup) Interact(model tea.Model) tea.Msg {
 	default:
 		return dp.items[dp.current].Interact(model)
 	}
+}
+
+func (dp *DefaultPopup) Width() int {
+	var minwidth int = len(dp.title)
+	for s := range strings.SplitSeq(dp.body, "\n") {
+		if minwidth < len(s) {
+			minwidth = len(s)
+		}
+	}
+	for _, i := range dp.Items() {
+		switch i := i.(type) {
+		case *ScreenLabel:
+			for s := range strings.SplitSeq(i.label, "\n") {
+				if minwidth < len(s) {
+					minwidth = len(s)
+				}
+			}
+		case *ScreenToggle:
+			if minwidth < len(i.label)+4 {
+				minwidth = len(i.label) + 4
+			}
+		case *ScreenButton:
+			if minwidth < len(i.label)+4 {
+				minwidth = len(i.label) + 4
+			}
+		}
+	}
+	spew.Fdump(base.Dump, minwidth, dp.width)
+	return int(math.Max(float64(dp.width), float64(minwidth)))
 }
 
 func (dp *DefaultPopup) Render() string {

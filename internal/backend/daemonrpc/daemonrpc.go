@@ -1,4 +1,4 @@
-package backend
+package daemonrpc
 
 import (
 	"bytes"

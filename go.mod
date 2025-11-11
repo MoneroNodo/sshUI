@@ -3,12 +3,13 @@ module github.com/moneronodo/sshui
 go 1.25.1
 
 require (
-	github.com/Wifx/gonetworkmanager/v3 v3.2.0
 	github.com/charmbracelet/bubbles v0.21.0
 	github.com/charmbracelet/bubbletea v1.3.10
 	github.com/charmbracelet/lipgloss v1.1.0
 	github.com/davecgh/go-spew v1.1.1
 	github.com/godbus/dbus/v5 v5.1.0
+	github.com/mattn/go-sqlite3 v1.14.32
+	github.com/mergestat/timediff v0.0.4
 	golang.org/x/text v0.3.8
 )
 

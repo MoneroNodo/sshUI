@@ -1,4 +1,4 @@
-package backend
+package i_dbus
 
 import (
 	"os"
@@ -59,7 +59,7 @@ func DbusSignal(s *dbus.Signal) dbus_model.DbusSignal {
 	}
 }
 
-func DbusSignals(prog *tea.Program) {
+func Signals(prog *tea.Program) {
 	conn, err := dbus.ConnectSystemBus()
 	if err != nil {
 		spew.Fprintln(base.Dump, "Dbus: ", err)
@@ -86,16 +86,16 @@ func DbusSignals(prog *tea.Program) {
 	}
 }
 
-func DbusCall(notification string, args ...any) {
+func Call(notification string, args ...any) {
 	conn, err := dbus.ConnectSessionBus()
 	if err != nil {
-		panic(err)
+		spew.Fdump(base.Dump, err)
 	}
 	defer conn.Close()
 
 	obj := conn.Object("com.moneronodo.embeddedInterface", "/com/monero/nodo")
 	call := obj.Call("com.moneronodo.embeddedInterface."+notification, 0, args)
 	if call.Err != nil {
-		panic(call.Err)
+		spew.Fdump(base.Dump, call.Err)
 	}
 }

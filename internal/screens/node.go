@@ -5,6 +5,7 @@ import (
 
 	"fmt"
 	"net"
+	"strconv"
 
 	tea "github.com/charmbracelet/bubbletea"
 	gss "github.com/charmbracelet/lipgloss"
@@ -24,9 +25,7 @@ func getClearnetIp() string {
 var node *Node = &Node{}
 
 const (
-	clearnetPort int = 18089
-	onionPort    int = 18089
-	i2pPort      int = 18089
+	nodePort int = 18089
 )
 
 var (
@@ -58,35 +57,86 @@ func NewNode() *Node {
 	return node
 }
 
+var valueStyle = gss.NewStyle().Foreground(gss.Color(base.CWhite))
+
+func newInputIntBtn(label, val string) *ScreenButton {
+	v, _ := base.GetVal(val).(int)
+	str := fmt.Sprintf("%s: %s", label, valueStyle.Render(strconv.Itoa(v)))
+	var btn *ScreenButton
+	btn = NewScreenButton(str, gss.Color(base.CGreen),
+		func(sb *ScreenButton) tea.Cmd {
+			v, _ := base.GetVal(val).(int)
+			in := NewScreenInputField(strconv.Itoa(v), strconv.Itoa(v), gss.Color(base.CGray))
+			AddPopup(NewDefaultPopupOKCancel(label, "Set new value", gss.Color(base.CGreen),
+				func(sb *ScreenButton) tea.Cmd {
+					i, err := strconv.Atoi(in.Delegate.Value())
+					if err == nil {
+						base.SetConfig(val, i)
+						base.SaveConfigFile()
+					}
+					btn.label = fmt.Sprintf("%s: %s", label, valueStyle.Render(in.Delegate.Value()))
+					return nil
+				}, nil,
+				in,
+			))
+			return nil
+		})
+	return btn
+}
+
+func newInputStrBtn(label, val string, secret bool) *ScreenButton {
+	var (
+		str string
+		btn *ScreenButton
+	)
+	if secret {
+		str = label
+	} else {
+		v, _ := base.GetVal(val).(string)
+		str = fmt.Sprintf("%s: %s", label, valueStyle.Render(v))
+	}
+	btn = NewScreenButton(str, gss.Color(base.CGreen),
+		func(sb *ScreenButton) tea.Cmd {
+			v, _ := base.GetVal(val).(string)
+			in := NewScreenInputField(v, v, gss.Color(base.CGray))
+			AddPopup(NewDefaultPopupOKCancel(label, "Set new value", gss.Color(base.CBrightGreen),
+				func(sb *ScreenButton) tea.Cmd {
+					base.SetConfig(val, in.Delegate.Value())
+					if !secret {
+						btn.label = fmt.Sprintf("%s: %s", label, valueStyle.Render(in.Delegate.Value()))
+					}
+					return base.SaveConfigFile
+				}, nil,
+				in,
+			))
+			return nil
+		})
+	return btn
+}
+
+func newToggle(label, val string) *ScreenToggle {
+	toggle := NewScreenToggle(label, gss.Color(base.CGreen),
+		func(sb *ScreenToggle, toggled bool) tea.Cmd {
+			base.SetConfig(val, toggled)
+			return base.SaveConfigFile
+		})
+	toggle.toggled, _ = base.GetVal(val).(bool)
+	return toggle
+}
+
 func (s *Node) Init() tea.Msg {
+	hiddenRpcToggle = newToggle("Hidden RPC", "anon_rpc")
+	torToggle = newToggle("Enable Tor", "tor_enabled")
+	torAllToggle = newToggle("Route All Through Tor", "tor_global_enabled")
+	i2pToggle = newToggle("Enable I2P", "i2p_enabled")
+
 	clearnetAddr = getClearnetIp()
-	onionAddr = base.GetVal("tor_address").(string)
-	i2pAddr = base.GetVal("i2p_address").(string)
+	onionAddr, _ = base.GetVal("tor_address").(string)
+	i2pAddr, _ = base.GetVal("i2p_address").(string)
 
-	clearnetLabel = NewScreenLabel(fmt.Sprintf("%s:%d", clearnetAddr, clearnetPort), gss.Color(base.CPurple))
-	onionLabel = NewScreenLabel(fmt.Sprintf("%s:%d", onionAddr, onionPort), gss.Color(base.CPurple))
-	i2pLabel = NewScreenLabel(fmt.Sprintf("%s:%d", i2pAddr, i2pPort), gss.Color(base.CPurple))
-
-	hiddenRpcToggle = NewScreenToggle("Enable Hidden RPC", gss.Color(base.CGreen),
-		func(sb *ScreenToggle, toggled bool) tea.Msg {
-			base.SetConfig("anon_rpc", toggled)
-			return nil
-		})
-	torToggle = NewScreenToggle("Enable Tor", gss.Color(base.CGreen),
-		func(sb *ScreenToggle, toggled bool) tea.Msg {
-			base.SetConfig("tor_enabled", toggled)
-			return nil
-		})
-	torAllToggle = NewScreenToggle("Route All Through Tor", gss.Color(base.CGreen),
-		func(sb *ScreenToggle, toggled bool) tea.Msg {
-			base.SetConfig("torproxy_enabled", toggled)
-			return nil
-		})
-	i2pToggle = NewScreenToggle("Enable I2P", gss.Color(base.CGreen),
-		func(sb *ScreenToggle, toggled bool) tea.Msg {
-			base.SetConfig("i2p_enabled", toggled)
-			return nil
-		})
+	clearnetLabel = NewScreenLabel(fmt.Sprintf("%s:%d", clearnetAddr, nodePort), gss.Color(base.CPurple))
+	onionLabel = NewScreenLabel(fmt.Sprintf("%s:%d", onionAddr, nodePort), gss.Color(base.CPurple))
+	i2pLabel = NewScreenLabel(fmt.Sprintf("%s:%d", i2pAddr, nodePort), gss.Color(base.CPurple))
 
 	clearnetPane = NewScreenPane(
 		"Clearnet",
@@ -114,7 +164,6 @@ func (s *Node) Init() tea.Msg {
 
 	s.items = append(s.items, clearnetPane, onionPane, i2pPane)
 	s.init = true
-	UpdateFocus(s, 0)
 	return nil
 }
 
@@ -126,11 +175,9 @@ func (s *Node) View() {
 	if !s.init {
 		return
 	}
-
 }
 
 func (s *Node) Update(msg tea.Msg, m tea.Model) tea.Cmd {
-
 	return nil
 }
 
@@ -150,6 +197,22 @@ func (s *Node) Prev() tea.Msg {
 	return UpdateFocus(s, -1)
 }
 
-func (s *Node) Interact(m tea.Model) tea.Msg {
+func (s *Node) Interact(m tea.Model) tea.Cmd {
 	return s.items[s.current].Interact(m)
+}
+
+func (s *Node) PosVertical() gss.Position {
+	return gss.Position(0.8)
+}
+
+func (s *Node) PosHorizontal() gss.Position {
+	return gss.Center
+}
+
+func (s *Node) ItemWidth() int {
+	return 4
+}
+
+func (s *Node) Vertical() bool {
+	return true
 }

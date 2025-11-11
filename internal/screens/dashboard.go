@@ -9,7 +9,7 @@ import (
 	tea "github.com/charmbracelet/bubbletea"
 	gss "github.com/charmbracelet/lipgloss"
 	"github.com/davecgh/go-spew/spew"
-	backend "github.com/moneronodo/sshui/internal/backend"
+	"github.com/moneronodo/sshui/internal/backend/daemonrpc"
 	"github.com/moneronodo/sshui/internal/base"
 	rpc_model "github.com/moneronodo/sshui/internal/model/daemonrpc"
 	dbus_model "github.com/moneronodo/sshui/internal/model/dbus"
@@ -103,7 +103,7 @@ func (s *Dashboard) getSyncStatus() string {
 		syncing bool = s.getInfo.BusySyncing
 	)
 	synPer := fmt.Sprintf("%.0f", (float32(hei)/float32(tarHei))*100)
-	if syn && hei == tarHei {
+	if syn || hei == tarHei {
 		return "Synchronized (100%)"
 	} else if syncing {
 		return fmt.Sprintf("Synchronizing (%s)", synPer)
@@ -283,14 +283,19 @@ func updateStatuses(s *Dashboard, str string) {
 	s.hardware.uptime = spl[9]
 }
 
-func UpdateBody(prog *tea.Program) {
+func _updateRpc(prog *tea.Program) {
+	j := *daemonrpc.DaemonPost("http://127.0.0.1:18081/json_rpc", daemonrpc.DaemonRequestBodyGetInfo())
+	prog.Send(rpc_model.DaemonRPCMsg{
+		Response: j,
+	})
+}
+
+func UpdateRPC(prog *tea.Program) {
 	rpcTick := time.NewTicker(5 * time.Second)
 	defer rpcTick.Stop()
+	_updateRpc(prog)
 	for range rpcTick.C {
-		j := *backend.DaemonPost("http://127.0.0.1:18081/json_rpc", backend.DaemonRequestBodyGetInfo())
-		prog.Send(rpc_model.DaemonRPCMsg{
-			Response: j,
-		})
+		_updateRpc(prog)
 	}
 }
 
@@ -302,6 +307,22 @@ func (s *Dashboard) Prev() tea.Msg {
 	return &FocusChangeMsg{}
 }
 
-func (s *Dashboard) Interact(m tea.Model) tea.Msg {
+func (s *Dashboard) Interact(m tea.Model) tea.Cmd {
 	return nil
+}
+
+func (s *Dashboard) PosVertical() gss.Position {
+	return gss.Position(0.8)
+}
+
+func (s *Dashboard) PosHorizontal() gss.Position {
+	return gss.Center
+}
+
+func (s *Dashboard) ItemWidth() int {
+	return 4
+}
+
+func (s *Dashboard) Vertical() bool {
+	return false
 }
