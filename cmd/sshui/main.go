@@ -269,7 +269,7 @@ func initModel() model {
 		screens:   []screens.Screen{},
 		current:   0,
 		active:    false,
-		firstBoot: false && base.IsFirstBoot(), // TODO remove
+		firstBoot: base.IsFirstBoot(),
 		styles:    base.InitStyles(1, 0, 0, 1),
 	}
 	if m.firstBoot {
