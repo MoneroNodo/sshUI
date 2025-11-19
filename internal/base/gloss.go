@@ -1,8 +1,6 @@
 package base
 
 import (
-	"math"
-
 	gss "github.com/charmbracelet/lipgloss"
 )
 
@@ -37,6 +35,12 @@ type Styles struct {
 
 func InitStyles(size, w, h, items float64) *Styles {
 	var st = new(Styles)
+	if w <= 0 {
+		w = 1
+	}
+	if h <= 0 {
+		h = 1
+	}
 	st.Border = gss.Color(CBrightBlack)
 	st.Tabs = gss.NewStyle().Foreground(gss.Color(CWhite))
 	st.TabsHg = gss.NewStyle().Foreground(gss.Color(CBlack)).Background(gss.Color(CGray))
@@ -45,12 +49,12 @@ func InitStyles(size, w, h, items float64) *Styles {
 		Padding(1).BorderStyle(gss.NormalBorder())
 	st.ContentItem = gss.NewStyle().
 		Padding(
-			int(math.Max(1, size*h*0.01/items)),
-			int(math.Max(2, size*w*0.02/items)),
+			int((h/items)*size * 0.01),
+			int((w/items)*size * 0.01),
 		).
 		Margin(
-			int(size*h*0.001/items),
-			int(size*w*0.002/items),
+			int((h/items)*size * 0.008),
+			int((w/items)*size * 0.008),
 		).BorderStyle(gss.NormalBorder())
 	st.Label = gss.NewStyle().Margin(1)
 	return st
