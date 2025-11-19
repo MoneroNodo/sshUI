@@ -60,7 +60,7 @@ func DbusSignal(s *dbus.Signal) dbus_model.DbusSignal {
 }
 
 func Signals(prog *tea.Program) {
-	conn, err := dbus.ConnectSystemBus()
+	conn, err := dbus.SystemBus()
 	if err != nil {
 		spew.Fprintln(base.Dump, "Dbus: ", err)
 		os.Exit(1)
@@ -87,15 +87,18 @@ func Signals(prog *tea.Program) {
 }
 
 func Call(notification string, args ...any) {
-	conn, err := dbus.ConnectSessionBus()
+	spew.Fprintf(base.Dump, "Call %s\n", notification)
+	conn, err := dbus.SystemBus()
 	if err != nil {
 		spew.Fdump(base.Dump, err)
 	}
 	defer conn.Close()
 
-	obj := conn.Object("com.moneronodo.embeddedInterface", "/com/monero/nodo")
-	call := obj.Call("com.moneronodo.embeddedInterface."+notification, 0, args)
+	obj := conn.Object("com.monero.nodo", "/com/monero/nodo")
+	call := obj.Call("com.moneronodo.embeddedInterface."+notification, 0, args...)
 	if call.Err != nil {
 		spew.Fdump(base.Dump, call.Err)
+	} else {
+		spew.Fdump(base.Dump, call)
 	}
 }
