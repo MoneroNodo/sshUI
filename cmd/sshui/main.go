@@ -9,8 +9,6 @@ import (
 	"github.com/charmbracelet/bubbles/viewport"
 	tea "github.com/charmbracelet/bubbletea"
 	gss "github.com/charmbracelet/lipgloss"
-
-	// "github.com/davecgh/go-spew/spew"
 	"github.com/moneronodo/sshui/internal/backend/i_dbus"
 	"github.com/moneronodo/sshui/internal/base"
 	"github.com/moneronodo/sshui/internal/screens"
@@ -68,9 +66,6 @@ func closePopup() {
 }
 
 func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
-	// if base.Dump != nil {
-	//   spew.Fdump(base.Dump, msg)
-	// }
 	var (
 		cmds []tea.Cmd
 		cmd  tea.Cmd
@@ -262,13 +257,11 @@ func (m model) View() string {
 	) + popups
 }
 
-// /home/nodo/variables/firstboot
 func initModel() model {
 	var dump *os.File
 	var err error
 	dump, err = os.OpenFile("messages.log", os.O_CREATE|os.O_TRUNC|os.O_WRONLY, 0o644)
 	if err != nil {
-		// spew.Fdump(base.Dump, err)
 		os.Exit(1)
 	}
 	base.Dump = dump
@@ -291,7 +284,6 @@ func initModel() model {
 			screens.NewSystem(),
 			screens.NewLightWallet(),
 			screens.NewMoneropay(),
-			// TODO ... the rest
 		)
 	}
 	// Set cursors properly, taking unselectable items into account

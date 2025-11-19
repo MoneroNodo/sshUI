@@ -1,8 +1,6 @@
 package screens
 
 import (
-	// "fmt"
-
 	tea "github.com/charmbracelet/bubbletea"
 	gss "github.com/charmbracelet/lipgloss"
 	"github.com/moneronodo/sshui/internal/base"
