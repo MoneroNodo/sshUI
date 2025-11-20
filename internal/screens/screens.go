@@ -2,7 +2,6 @@ package screens
 
 import (
 	"fmt"
-	"math"
 	"strings"
 
 	"github.com/charmbracelet/bubbles/textinput"
@@ -529,17 +528,12 @@ func SetFocusPopup(s Popup) {
 }
 
 func UpdateFocus(s Screen, mod int) tea.Msg {
-	if len(s.Items()) == 0 {
-		return nil
-	}
 	c := *s.Current()
 	switch t := s.Items()[c].(type) { // take panes into account
 	case *ScreenPane:
 		modret := WrapPane(t, mod)
 		SetFocusPane(t)
-		if modret != 0 {
-			WrapScreen(s, modret)
-		}
+		WrapScreen(s, modret)
 	default:
 		WrapScreen(s, mod)
 	}
@@ -682,7 +676,7 @@ func (dp *DefaultPopup) Width() int {
 			}
 		}
 	}
-	return int(math.Max(float64(dp.width), float64(minwidth)))
+	return max(dp.width, minwidth)
 }
 
 func (dp *DefaultPopup) Render() string {

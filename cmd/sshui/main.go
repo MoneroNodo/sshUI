@@ -40,6 +40,7 @@ func (m model) initScreens() tea.Msg {
 		msg := v.Init()
 		msgs = append(msgs, msg)
 	}
+	screens.UpdateFocus(m.screens[m.current], 0)
 	return msgs
 }
 
@@ -150,8 +151,8 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 				screens.UpdateFocus(curscreen, 0)
 				return m, nil
 			}
-		case "ctrl+c", "esc":
-			if m.active {
+		case "esc", "ctrl+c":
+			if m.active && len(m.screens) > 1 {
 				m.active = false
 				return m, nil
 			} else {
@@ -276,6 +277,7 @@ func initModel() model {
 		m.screens = append(m.screens,
 			screens.NewFirstBoot(),
 		)
+		m.active = true
 	} else {
 		m.screens = append(m.screens,
 			screens.NewDashboard(),
