@@ -8,7 +8,6 @@ import (
 	"github.com/charmbracelet/bubbles/textinput"
 	tea "github.com/charmbracelet/bubbletea"
 	gss "github.com/charmbracelet/lipgloss"
-	"github.com/davecgh/go-spew/spew"
 	"github.com/moneronodo/sshui/internal/base"
 )
 
@@ -110,7 +109,6 @@ func (si *ScreenPane) Update(msg tea.Msg, model tea.Model) tea.Cmd {
 
 func (sp *ScreenPane) Interact(m tea.Model) tea.Cmd {
 	if sp.Current < len(sp.Items) && sp.Items[sp.Current].IsEnabled() {
-		spew.Fprintf(base.Dump, "cur=%d m=%v\n", sp.Current, m)
 		return sp.Items[sp.Current].Interact(m)
 	}
 	return nil
@@ -684,7 +682,6 @@ func (dp *DefaultPopup) Width() int {
 			}
 		}
 	}
-	spew.Fdump(base.Dump, minwidth, dp.width)
 	return int(math.Max(float64(dp.width), float64(minwidth)))
 }
 
