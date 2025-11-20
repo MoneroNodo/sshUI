@@ -21,14 +21,9 @@ var (
 
 const addrPattern = "^4[0-9A-Za-z]{94}$"
 
-// const (
-// 	configLoc = "/home/nodo/variables/config.json"
-// 	configBak = "/home/nodo/variables/config.back.json"
-// )
-
 const (
-	configLoc = "config.json"
-	configBak = "config.json.bak"
+	configLoc = "/home/nodo/variables/config.json"
+	configBak = "/home/nodo/variables/config.back.json"
 )
 
 type ConfigSavedMsg struct{}
