@@ -140,7 +140,7 @@ func (s *FirstBoot) Interact(m tea.Model) tea.Cmd {
 }
 
 func (s *FirstBoot) ItemWidth() int {
-	return 30
+	return 6
 }
 
 func (s *FirstBoot) Vertical() bool {
