@@ -533,6 +533,9 @@ func SetFocusPopup(s Popup) {
 }
 
 func UpdateFocus(s Screen, mod int) tea.Msg {
+	if len(s.Items()) == 0 {
+		return nil
+	}
 	c := *s.Current()
 	switch t := s.Items()[c].(type) { // take panes into account
 	case *ScreenPane:
