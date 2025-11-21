@@ -267,6 +267,8 @@ func (m model) View() string {
 	) + popups
 }
 
+
+
 func initModel() model {
 	var dump *os.File
 	var err error

@@ -44,7 +44,6 @@ func newBanlistToggle(label, val string) *ScreenToggle {
 }
 
 func (s *Settings) Init() tea.Msg {
-
 	inPeerButton = newInputIntBtn("Incoming Peers", "in_peers")
 	outPeerButton = newInputIntBtn("Outgoing Peers", "out_peers")
 	upSpeedButton = newInputIntBtn("Upload Speed (kB/s)", "limit_rate_up")
