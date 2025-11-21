@@ -2,7 +2,6 @@ package main
 
 import (
 	"log"
-	"math"
 	"os"
 	"os/exec"
 
@@ -257,7 +256,7 @@ func (m model) View() string {
 			gss.Center,
 			gss.Center,
 			m.styles.ContentArea.BorderStyle(gss.ThickBorder()).
-				Width(4+int(math.Max(float64(screens.Popups[0].Width()), math.Max(20, float64(m.width)*0.6)))).
+				Width(4+max(screens.Popups[0].Width(), int(max(20, float64(m.width) * 0.6)))).
 				Render(screens.Popups[0].Render()),
 		)
 	}
