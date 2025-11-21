@@ -141,7 +141,10 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			}
 		case "enter":
 			if m.active {
-				c := curscreen.Items()[*curscreen.Current()].Interact(m)
+				if len(curscreen.Items()) == 0 {
+					return m, nil
+				}
+				c := curscreen.Interact(m)
 				if c == nil {
 					c = curscreen.Next
 				}
