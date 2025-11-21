@@ -60,13 +60,13 @@ func NewNode() *Node {
 var valueStyle = gss.NewStyle().Foreground(gss.Color(base.CWhite))
 
 func newInputIntBtn(label, val string) *ScreenButton {
-	v, _ := base.GetVal(val).(int)
-	str := fmt.Sprintf("%s: %s", label, valueStyle.Render(strconv.Itoa(v)))
+	v, _ := base.GetVal(val).(float64)
+	str := fmt.Sprintf("%s: %s", label, valueStyle.Render(strconv.Itoa(int(v))))
 	var btn *ScreenButton
 	btn = NewScreenButton(str, gss.Color(base.CGreen),
 		func(sb *ScreenButton) tea.Cmd {
-			v, _ := base.GetVal(val).(int)
-			in := NewScreenInputField(strconv.Itoa(v), strconv.Itoa(v), gss.Color(base.CGray))
+			v, _ := base.GetVal(val).(float64)
+			in := NewScreenInputField(strconv.Itoa(int(v)), strconv.Itoa(int(v)), gss.Color(base.CGray))
 			AddPopup(NewDefaultPopupOKCancel(label, "Set new value", gss.Color(base.CGreen),
 				func(sb *ScreenButton) tea.Cmd {
 					i, err := strconv.Atoi(in.Delegate.Value())
