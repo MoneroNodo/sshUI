@@ -295,6 +295,7 @@ func initModel() model {
 			screens.NewSystem(),
 			screens.NewLightWallet(),
 			screens.NewMoneropay(),
+			screens.NewDropToShell(),
 		)
 	}
 	// Set cursors properly, taking unselectable items into account
