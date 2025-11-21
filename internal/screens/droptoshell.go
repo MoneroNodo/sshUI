@@ -7,7 +7,9 @@ import (
 
 var dropToShell *DropToShell = &DropToShell{}
 
-type DropToShell struct{}
+type DropToShell struct{
+	current int
+}
 
 func NewDropToShell() *DropToShell {
 	return dropToShell
@@ -36,7 +38,7 @@ func (s *DropToShell) Items() []ScreenItem {
 }
 
 func (s *DropToShell) Current() *int {
-	return nil
+	return &s.current
 }
 
 func (s *DropToShell) Next() tea.Msg {
