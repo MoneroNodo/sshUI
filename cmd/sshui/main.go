@@ -152,12 +152,12 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			} else {
 				m.active = true
 				screens.UpdateFocus(curscreen, 0)
-				return m, nil
+				return m, m.sendActive
 			}
 		case "esc", "ctrl+c":
 			if m.active && len(m.screens) > 1 {
 				m.active = false
-				return m, nil
+				return m, m.sendActive
 			} else {
 				return m, tea.Quit
 			}
@@ -177,6 +177,13 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	}
 
 	return m, tea.Batch(cmds...)
+}
+
+func (m *model) sendActive() tea.Msg {
+	return screens.ScreenActiveChangeMsg{
+		Active: m.active,
+		Screen: m.screens[m.current],
+	}
 }
 
 func (m model) renderTabs(col gss.Color) string {

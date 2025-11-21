@@ -17,6 +17,11 @@ var (
 type ScreenToggleAction func(*ScreenToggle, bool) tea.Cmd
 type ScreenButtonAction func(*ScreenButton) tea.Cmd
 
+type ScreenActiveChangeMsg struct{
+	Active bool
+	Screen Screen
+}
+
 type ScreenLeaveMsg struct {
 	Current Screen
 }
