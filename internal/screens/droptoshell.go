@@ -7,7 +7,7 @@ import (
 
 var dropToShell *DropToShell = &DropToShell{}
 
-type DropToShell struct{
+type DropToShell struct {
 	current int
 }
 
@@ -26,9 +26,14 @@ func (s *DropToShell) Label() string {
 func (s *DropToShell) View() {}
 
 func (s *DropToShell) Update(msg tea.Msg, m tea.Model) tea.Cmd {
-	switch msg.(type) {
-	case DropToShell:
-		tea.Quit()
+	switch msg := msg.(type) {
+	case ScreenActiveChangeMsg:
+		if msg.Active {
+			switch msg.Screen.(type) {
+			case *DropToShell:
+				return tea.Quit
+			}
+		}
 	}
 	return nil
 }
